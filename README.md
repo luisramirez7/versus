@@ -10,6 +10,7 @@ A Discord bot that runs timed paper-trading matches between friends. Everyone in
 2. `/party start` (host). If the market is open the round is live now; otherwise it's scheduled for the next open. It ends at the close of the last session (Day Sprint = 1 session, Week = 5, Month = 21, Quarter = 63).
 3. `/buy NVDA dollars:500`, `/sell AAPL all:true`. Orders fill at the first fresh price at least one second after the bot receives them, so nobody can front-run a stale quote. Fills post publicly to the channel; `/portfolio` is private.
 4. The pinned leaderboard updates after every fill and once a minute.
+   `/chart NVDA range:5d` posts a candlestick or line chart with your own fills marked; `compare:AAPL,SPY` overlays up to three symbols as % change.
 5. At the end the round settles from stored prices and the bot posts final standings with best and worst trades. `/party create` runs it back.
 
 The full spec, including the fill model, universe rules, and data model, is in [SPEC.md](SPEC.md).
