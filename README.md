@@ -43,4 +43,15 @@ tests/             engine tests against in-memory SQLite with a fake clock and i
 
 ## Deploy
 
-One process, one small machine. `Dockerfile` and `fly.toml` are included; SQLite on a volume is fine for a few servers. For anything shared, point `DATABASE_URL` at Postgres and install the `postgres` extra.
+One process, one small machine on Fly.io (app `versus-bot`, region `iad`, SQLite on a 1 GB volume). Never run two copies with the same token: they would answer every command twice.
+
+```bash
+brew install flyctl && fly auth login
+fly apps create versus-bot --org personal
+fly volumes create data --app versus-bot --region iad --size 1 --yes
+grep -E '^(DISCORD_TOKEN|FMP_API_KEY|DEV_GUILD_ID)=' .env | fly secrets import --app versus-bot --stage
+fly deploy --app versus-bot --ha=false --yes
+fly logs --app versus-bot            # look for "logged in as"
+```
+
+Redeploy after changes with `fly deploy --app versus-bot --ha=false`. For anything shared across many servers, point `DATABASE_URL` at Postgres and install the `postgres` extra.
