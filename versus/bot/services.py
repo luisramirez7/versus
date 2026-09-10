@@ -39,7 +39,7 @@ class Services:
         prices = PriceService(fmp, settings.poll_interval_s, on_observations=SnapshotWriter(db))
         base_rules = Rules(fill_delay_s=settings.fill_delay_s, fill_timeout_s=settings.fill_timeout_s)
         universe = Universe(fmp, db, base_rules)
-        rounds = RoundService(db, calendar)
+        rounds = RoundService(db, calendar, min_players=settings.min_players)
         engine = FillEngine(db, prices, universe, calendar)
         log.info(
             "services ready (db=%s, holidays=%d)",

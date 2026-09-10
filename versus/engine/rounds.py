@@ -42,10 +42,12 @@ class RoundService:
         db: Database,
         calendar: MarketCalendar,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        min_players: int = 2,
     ):
         self.db = db
         self.calendar = calendar
         self.clock = clock
+        self.min_players = min_players
 
     # ----- lookups -----
     async def active(self, channel_id: int) -> PartyState | None:
@@ -175,8 +177,8 @@ class RoundService:
             raise RoundError("Only the host can start the round.")
         if st.party.status != "lobby":
             raise RoundError("The round has already been started.")
-        if len(st.members) < 2:
-            raise RoundError("Need at least 2 players. Share `/join` with someone.")
+        if len(st.members) < self.min_players:
+            raise RoundError(f"Need at least {self.min_players} players. Share `/join` with someone.")
         now = self.clock()
         start_at, end_at = self.calendar.round_window(now, st.round.sessions)
         status = "live" if start_at <= now else "scheduled"

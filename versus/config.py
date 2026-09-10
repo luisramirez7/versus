@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     fill_timeout_s: float = 30.0
     board_refresh_s: float = 60.0
     scheduler_tick_s: float = 15.0
+    min_players: int = 2  # set to 1 in .env to test a round alone
 
     log_level: str = "INFO"
 
