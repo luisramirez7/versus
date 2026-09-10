@@ -42,7 +42,7 @@ class RoundService:
         db: Database,
         calendar: MarketCalendar,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
-        min_players: int = 2,
+        min_players: int = 1,
     ):
         self.db = db
         self.calendar = calendar
@@ -143,8 +143,11 @@ class RoundService:
 
     async def join(self, party_id: int, user_id: int, display_name: str) -> Portfolio:
         st = await self.state(party_id)
-        if st.party.status not in ("lobby", "scheduled"):
-            raise RoundError("This round is already live. You can join the next one.")
+        # Drop-in matchmaking: you can join a lobby, a scheduled round, or one that's
+        # already live — a late joiner gets full starting cash and plays the time that's
+        # left. Only a round that's wrapping up or over is closed to newcomers.
+        if st.party.status not in ("lobby", "scheduled", "live"):
+            raise RoundError("This round has already ended. Catch the next one.")
         if any(m.owner_id == user_id for m in st.members):
             raise RoundError("You're already in.")
         async with self.db.session() as s:
@@ -178,7 +181,8 @@ class RoundService:
         if st.party.status != "lobby":
             raise RoundError("The round has already been started.")
         if len(st.members) < self.min_players:
-            raise RoundError(f"Need at least {self.min_players} players. Share `/join` with someone.")
+            plural = "" if self.min_players == 1 else "s"
+            raise RoundError(f"Need at least {self.min_players} player{plural} to start. Hit `/join` first.")
         now = self.clock()
         start_at, end_at = self.calendar.round_window(now, st.round.sessions)
         status = "live" if start_at <= now else "scheduled"

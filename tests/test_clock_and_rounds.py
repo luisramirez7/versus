@@ -52,7 +52,7 @@ async def test_party_lifecycle(rounds, clock):
     assert st.party.status == "lobby"
     with pytest.raises(RoundError, match="already has a party"):
         await rounds.create(guild_id=1, channel_id=1, host_user_id=10, cash=1_000, preset="day")
-    with pytest.raises(RoundError, match="at least 2"):
+    with pytest.raises(RoundError, match="at least 1"):
         await rounds.start(st.party.id, 10)
     await rounds.join(st.party.id, 10, "Host")
     await rounds.join(st.party.id, 20, "Guest")
@@ -62,8 +62,11 @@ async def test_party_lifecycle(rounds, clock):
         await rounds.start(st.party.id, 20)
     st = await rounds.start(st.party.id, 10)
     assert st.party.status == "live" and st.round.end_at is not None
-    with pytest.raises(RoundError, match="already live"):
-        await rounds.join(st.party.id, 30, "Late")
+    # Matchmaking drop-in: a newcomer can join a live round and gets full starting cash.
+    late = await rounds.join(st.party.id, 30, "Late")
+    assert late.cash == st.round.starting_cash
+    st = await rounds.state(st.party.id)
+    assert 30 in [m.owner_id for m in st.members]
     st = await rounds.end_now(st.party.id, 10)
     _, to_settle = await rounds.due(clock.now)
     assert [r.id for r in to_settle] == [st.round.id]
@@ -81,6 +84,40 @@ async def test_scheduled_when_market_closed(rounds, clock):
     assert [r.id for r in to_live] == [st.round.id]
     assert await rounds.mark_live(st.round.id)
     assert not await rounds.mark_live(st.round.id)
+
+
+def test_board_marks_mid_round_drop_ins():
+    from datetime import timedelta
+    from decimal import Decimal
+    from types import SimpleNamespace
+
+    from versus.bot.embeds import board_embed
+    from versus.engine.valuation import Standing
+
+    def standing(rank: int, name: str, joined_at: datetime) -> Standing:
+        return Standing(
+            rank=rank,
+            portfolio_id=rank,
+            owner_id=rank,
+            display_name=name,
+            equity=Decimal(1000),
+            cash=Decimal(1000),
+            return_pct=Decimal("0.05"),
+            fills=0,
+            top_holding=None,
+            top_weight=None,
+            joined_at=joined_at,
+        )
+
+    start = datetime(2026, 9, 10, 13, 30, tzinfo=UTC)
+    st = SimpleNamespace(round=SimpleNamespace(start_at=start, end_at=start + timedelta(hours=6)))
+    board = [
+        standing(1, "Host", start - timedelta(minutes=1)),  # joined in the lobby
+        standing(2, "Late", start + timedelta(hours=2)),  # dropped in live
+    ]
+    desc = board_embed(st, board, start + timedelta(hours=3)).description
+    assert "dropped in mid-round" in desc
+    assert desc.count("⏱") == 2  # once on the Late row, once in the legend — not on Host
 
 
 def test_always_open_calendar_is_dev_only_and_open_at_night():

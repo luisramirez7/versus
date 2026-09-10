@@ -24,23 +24,34 @@ DOWN = 0xF0626C
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
 
 
+LATE = "⏱"
+
+
 def _footer(e: discord.Embed, extra: str | None = None) -> discord.Embed:
     e.set_footer(text=f"{extra} · {DISCLAIMER}" if extra else DISCLAIMER)
     return e
 
 
+def _joined_late(rnd, joined_at: datetime | None) -> bool:
+    """A drop-in: joined after the round actually went live."""
+    return rnd.start_at is not None and joined_at is not None and joined_at > rnd.start_at
+
+
 def lobby_embed(st: PartyState) -> discord.Embed:
     rnd = st.round
-    e = discord.Embed(title="Party lobby", color=GOLD)
+    e = discord.Embed(title="🎉 Party lobby", color=GOLD)
     e.description = (
         f"**{PRESET_LABELS[rnd.preset]}** · {rnd.sessions} session{'s' if rnd.sessions > 1 else ''} · "
         f"{money(rnd.starting_cash)} each\n"
         f"Host: <@{st.party.host_user_id}>"
     )
-    names = "\n".join(f"• {m.display_name}" for m in st.members) or "_Nobody yet_"
+    names = "\n".join(f"👤 {m.display_name}" for m in st.members) or "_Nobody yet — don't be shy._"
     e.add_field(name=f"Players ({len(st.members)})", value=names, inline=False)
     e.add_field(
-        name="Join", value="Hit **Join** or type `/join`. The host starts with `/party start`.", inline=False
+        name="Join",
+        value="Hit **Join** or type `/join`. Host drops the flag with `/party start` — "
+        "and stragglers can still jump in once it's live. ⏱",
+        inline=False,
     )
     return _footer(e)
 
@@ -61,25 +72,31 @@ def status_embed(st: PartyState) -> discord.Embed:
 
 def live_message(st: PartyState) -> str:
     rnd = st.round
+    players = len(st.members)
     return (
-        f"🔔 **Round is live.** {money(rnd.starting_cash)} each, {len(st.members)} players, "
-        f"ends {ts(rnd.end_at)} ({ts(rnd.end_at, 'R')}). `/buy` to get started."
+        f"🔔 **We're live!** {money(rnd.starting_cash)} each, {players} "
+        f"trader{'s' if players != 1 else ''}, ends {ts(rnd.end_at)} ({ts(rnd.end_at, 'R')}). "
+        f"Lock in — `/buy` to make your first move. 📈"
     )
 
 
 def scheduled_message(st: PartyState) -> str:
     rnd = st.round
-    return f"📅 Scheduled. Trading opens {ts(rnd.start_at)} and the round ends {ts(rnd.end_at)}."
+    return (
+        f"📅 **Locked in.** Trading opens {ts(rnd.start_at)} ({ts(rnd.start_at, 'R')}) and the round "
+        f"ends {ts(rnd.end_at)}. Get your watchlist ready. 👀"
+    )
 
 
 def board_embed(
     st: PartyState, board: list[Standing], as_of: datetime, delayed: bool = False
 ) -> discord.Embed:
     rnd = st.round
-    e = discord.Embed(title="Leaderboard", color=GOLD)
+    e = discord.Embed(title="📊 Leaderboard", color=GOLD)
     if not board:
-        e.description = "_No players yet._"
+        e.description = "_No players yet. Be the first — `/buy` something._"
         return _footer(e)
+    any_late = False
     rows = ["```", f"{'#':>2} {'player':<14} {'equity':>12} {'return':>8}  top"]
     for s in board:
         top = (
@@ -87,16 +104,20 @@ def board_embed(
             if s.top_holding and s.top_weight is not None
             else "cash"
         )
-        rows.append(
-            f"{s.rank:>2} {trunc(s.display_name, 14):<14} {money(s.equity):>12} {pct(s.return_pct):>8}  {top}"
-        )
+        late = _joined_late(rnd, s.joined_at)
+        any_late = any_late or late
+        row = f"{s.rank:>2} {trunc(s.display_name, 14):<14} {money(s.equity):>12} {pct(s.return_pct):>8}  {top}"
+        rows.append(f"{row}  {LATE}" if late else row)
     rows.append("```")
     lead = board[0]
     if len(board) > 1:
         gap = lead.equity - board[1].equity
-        rows.append(f"{MEDALS[1]} **{lead.display_name}** leads by {money(gap)}.")
+        flair = "🔥 " if lead.return_pct > 0 else ""
+        rows.append(f"{MEDALS[1]} {flair}**{lead.display_name}** leads by {money(gap)}.")
+    if any_late:
+        rows.append(f"{LATE} dropped in mid-round — playing the clock that's left.")
     if rnd.end_at:
-        rows.append(f"Ends {ts(rnd.end_at, 'R')}.")
+        rows.append(f"⏳ Ends {ts(rnd.end_at, 'R')}.")
     e.description = "\n".join(rows)
     stamp = f"Prices as of {as_of.astimezone().strftime('%-I:%M %p').lower()}"
     if delayed:
@@ -167,12 +188,20 @@ def rules_embed(rules: Rules, st: PartyState) -> discord.Embed:
 
 def recap_embed(st: PartyState, s: Settlement, extras=None) -> discord.Embed:
     rnd = st.round
-    e = discord.Embed(title="Final standings", color=GOLD)
+    e = discord.Embed(title="🏁 Final standings", color=GOLD)
     rows = []
+    any_late = False
     for st_ in s.standings:
         medal = MEDALS.get(st_.rank, f"`{st_.rank}.`")
         top = f" · {st_.top_holding}" if st_.top_holding else ""
-        rows.append(f"{medal} **{st_.display_name}** · {money(st_.equity)} · {pct(st_.return_pct)}{top}")
+        late = _joined_late(rnd, st_.joined_at)
+        any_late = any_late or late
+        tail = f" {LATE}" if late else ""
+        rows.append(
+            f"{medal} **{st_.display_name}** · {money(st_.equity)} · {pct(st_.return_pct)}{top}{tail}"
+        )
+    if any_late:
+        rows.append(f"_{LATE} dropped in mid-round — played the time that was left._")
     if s.standings:
         w = s.standings[0]
         margin = ""
