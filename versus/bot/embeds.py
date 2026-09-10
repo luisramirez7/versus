@@ -237,3 +237,9 @@ def fill_confirmation(r: FillResult) -> str:
         parts.append(f"Now holding {qty(r.position_qty_after)} @ avg {r.avg_cost_after:,.2f}.")
     parts.append(f"Cash left: {money(r.cash_after)}.")
     return " ".join(parts)
+
+
+def ask_embed(question: str, answer: str, model: str, lookups: int) -> discord.Embed:
+    e = discord.Embed(title=trunc(question, 200), description=answer, color=INK)
+    e.set_footer(text=f"{DISCLAIMER} · {model} · {lookups} lookup{'s' if lookups != 1 else ''}")
+    return e

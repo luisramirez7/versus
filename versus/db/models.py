@@ -211,6 +211,26 @@ class Instrument(Base):
     checked_at: Mapped[datetime] = mapped_column(UTCDateTime)
 
 
+class CopilotCall(Base):
+    """One /ask exchange. The request hash plus the stored answer make any reply auditable later."""
+
+    __tablename__ = "copilot_calls"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    channel_id: Mapped[int] = mapped_column(BigInteger)
+    round_id: Mapped[int | None] = mapped_column(ForeignKey("rounds.id"), nullable=True)
+    model: Mapped[str] = mapped_column(String(120))
+    request_sha: Mapped[str] = mapped_column(String(64))  # sha256 of the canonical JSON of the messages sent
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    tool_calls_json: Mapped[str] = mapped_column(Text, default="[]")
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    elapsed_ms: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
 Index("ix_fills_symbol", Fill.symbol)
 
 

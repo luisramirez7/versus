@@ -1,5 +1,6 @@
 from .models import (
     Base,
+    CopilotCall,
     FeedMessage,
     Fill,
     Instrument,
@@ -15,6 +16,7 @@ from .session import Database
 
 __all__ = [
     "Base",
+    "CopilotCall",
     "Database",
     "FeedMessage",
     "Fill",
