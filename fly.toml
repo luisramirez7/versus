@@ -1,0 +1,21 @@
+# fly launch --no-deploy, then: fly volumes create data --size 1; fly secrets set DISCORD_TOKEN=... FMP_API_KEY=...; fly deploy
+app = "versus-bot"
+primary_region = "iad"
+
+[build]
+
+[env]
+  DATABASE_URL = "sqlite+aiosqlite:////data/versus.db"
+  LOG_LEVEL = "INFO"
+
+[mounts]
+  source = "data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+# a bot is a single long-running process: exactly one machine, never scale to zero
+[processes]
+  app = "python -m versus"

@@ -1,0 +1,35 @@
+[project]
+name = "versus"
+version = "0.1.0"
+description = "Versus — a Discord bot that runs timed paper-trading matches between friends"
+requires-python = ">=3.12"
+dependencies = [
+    "discord.py>=2.7",
+    "httpx>=0.28",
+    "sqlalchemy[asyncio]>=2.0",
+    "aiosqlite>=0.22",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+]
+
+[project.optional-dependencies]
+postgres = ["asyncpg>=0.30"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.5"]
+
+[project.scripts]
+versus = "versus.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["versus*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
