@@ -9,6 +9,7 @@ from discord.ext import commands
 from versus.config import Settings, settings
 
 from .board import BoardManager
+from .cogs.chart import ChartCog
 from .cogs.info import InfoCog
 from .cogs.party import JoinView, PartyCog
 from .cogs.trade import TradeCog
@@ -40,6 +41,7 @@ class VersusBot(commands.Bot):
         await self.add_cog(PartyCog(self))
         await self.add_cog(TradeCog(self))
         await self.add_cog(InfoCog(self))
+        await self.add_cog(ChartCog(self))
         self.add_view(JoinView(self))
         self.add_dynamic_items(RematchButton)
         log.info("invite link: %s", invite_url(self.application_id))
