@@ -12,7 +12,7 @@ A Discord bot that runs timed paper-trading matches between friends. Everyone in
 4. The pinned leaderboard updates after every fill and once a minute.
    `/chart NVDA range:5d` posts a candlestick or line chart with your own fills marked; `compare:AAPL,SPY` overlays up to three symbols as % change.
 5. At the end the round settles from stored prices and the bot posts final standings with best and worst trades. `/party create` runs it back.
-6. `/ask why is NVDA down today?` (or `/ask how am I doing?`) asks the copilot, which looks up quotes, fundamentals, history, news and your own portfolio before answering. It explains and compares; it never picks for you and cannot trade. Optional: set `FIREWORKS_API_KEY` in `.env`; without it the command says so and everything else works.
+6. `/ask why is NVDA down today?` (or `/ask how am I doing?`, `/ask who reports this week?`, `/ask is Congress buying NVDA?`) asks the copilot, which can look up quotes, momentum, fundamentals and statements, analyst targets, earnings, calendars, movers and sector moves, a stock screener, macro readings, insider, congressional and 13F ownership, ETF holdings, earnings-call transcripts, news, and your own portfolio before answering. It explains and compares; it never picks for you and cannot trade. Optional: set `FIREWORKS_API_KEY` in `.env`; without it the command says so and everything else works.
 
 The full spec, including the fill model, universe rules, and data model, is in [SPEC.md](SPEC.md).
 
