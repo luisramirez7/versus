@@ -7,12 +7,16 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, time
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import httpx
 
 log = logging.getLogger(__name__)
+
+NY = ZoneInfo("America/New_York")  # FMP bar timestamps are New York wall time
+INTRADAY_INTERVALS = ("1min", "5min", "15min", "30min", "1hour", "4hour")
 
 
 def _dec(v) -> Decimal | None:
@@ -63,6 +67,28 @@ class Holiday:
     name: str
     is_closed: bool
     adj_close_time: str | None  # "13:00" on half days
+
+
+@dataclass(frozen=True)
+class Bar:
+    """One OHLCV bar. `ts` is aware New York time: the bar's start for intraday, midnight for daily."""
+
+    ts: datetime
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+    volume: int
+
+
+def _bar(row: dict, ts: datetime) -> Bar | None:
+    try:
+        o, h, lo, c = (_dec(row[k]) for k in ("open", "high", "low", "close"))
+    except KeyError:
+        return None
+    if None in (o, h, lo, c):
+        return None
+    return Bar(ts, o, h, lo, c, int(row.get("volume") or 0))
 
 
 class FMPClient:
@@ -142,3 +168,36 @@ class FMPClient:
                 )
             )
         return out
+
+    async def intraday(self, symbol: str, interval: str, from_date: date, to_date: date) -> list[Bar]:
+        """Intraday bars, oldest first. Rows arrive newest first with "YYYY-MM-DD HH:MM:SS" NY wall time."""
+        if interval not in INTRADAY_INTERVALS:
+            raise ValueError(f"interval must be one of {INTRADAY_INTERVALS}, not {interval!r}")
+        rows = await self._get(
+            f"historical-chart/{interval}",
+            symbol=symbol,
+            **{"from": from_date.isoformat(), "to": to_date.isoformat()},
+        )
+        bars = []
+        for r in rows or []:
+            ts = datetime.strptime(r["date"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=NY)
+            if (b := _bar(r, ts)) is not None:
+                bars.append(b)
+        bars.sort(key=lambda b: b.ts)
+        return bars
+
+    async def eod(self, symbol: str, from_date: date, to_date: date) -> list[Bar]:
+        """Daily bars, oldest first, stamped at NY midnight. Verified live 2026-09-09: the path is
+        historical-price-eod/full (the hyphenated form 404s) and rows carry date/open/high/low/close/volume."""
+        rows = await self._get(
+            "historical-price-eod/full",
+            symbol=symbol,
+            **{"from": from_date.isoformat(), "to": to_date.isoformat()},
+        )
+        bars = []
+        for r in rows or []:
+            ts = datetime.combine(date.fromisoformat(r["date"]), time(0), NY)
+            if (b := _bar(r, ts)) is not None:
+                bars.append(b)
+        bars.sort(key=lambda b: b.ts)
+        return bars
