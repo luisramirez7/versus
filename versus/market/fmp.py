@@ -1,6 +1,6 @@
 """Financial Modeling Prep client. Only the handful of endpoints the game needs.
 
-Endpoint shapes verified live on 2026-09-09 against the /stable API.
+Endpoint shapes verified live on 2026-09-09 against the /stable API (the /ask copilot reads too).
 """
 
 from __future__ import annotations
@@ -142,3 +142,33 @@ class FMPClient:
                 )
             )
         return out
+
+    # ----- /ask copilot reads (raw rows; the copilot tools trim them) -----
+    async def key_metrics_ttm(self, symbol: str) -> dict:
+        """Trailing-twelve-month metrics: marketCap, enterpriseValueTTM, evToEBITDATTM, returnOnEquityTTM, ..."""
+        rows = await self._get("key-metrics-ttm", symbol=symbol)
+        return dict(rows[0]) if rows else {}
+
+    async def ratios_ttm(self, symbol: str) -> dict:
+        """Trailing-twelve-month ratios: priceToEarningsRatioTTM, netProfitMarginTTM, dividendYieldTTM, ..."""
+        rows = await self._get("ratios-ttm", symbol=symbol)
+        return dict(rows[0]) if rows else {}
+
+    async def historical_eod(self, symbol: str, from_date: date, to_date: date) -> list[dict]:
+        """Daily bars, newest first: date, open, high, low, close, volume, change, changePercent, vwap."""
+        rows = await self._get(
+            "historical-price-eod/full",
+            symbol=symbol,
+            **{"from": from_date.isoformat(), "to": to_date.isoformat()},
+        )
+        return list(rows or [])
+
+    async def stock_news(self, symbols: list[str], limit: int = 5) -> list[dict]:
+        """Rows: symbol, publishedDate, publisher, site, title, text, url, image."""
+        rows = await self._get("news/stock", symbols=",".join(symbols), limit=limit)
+        return list(rows or [])
+
+    async def general_news(self, limit: int = 5) -> list[dict]:
+        """Same row shape as stock_news, symbol is null."""
+        rows = await self._get("news/general-latest", limit=limit)
+        return list(rows or [])
