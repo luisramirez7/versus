@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,6 +28,14 @@ class Settings(BaseSettings):
     scheduler_tick_s: float = 15.0
 
     log_level: str = "INFO"
+
+    @field_validator("dev_guild_id", mode="before")
+    @classmethod
+    def _blank_is_none(cls, v):
+        """`DEV_GUILD_ID=` in .env arrives as an empty string; treat it as unset."""
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
 
 settings = Settings()
