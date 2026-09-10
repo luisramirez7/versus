@@ -207,6 +207,21 @@ class FMPClient:
         return bars
 
     # ----- /ask copilot reads (raw rows; the copilot tools trim them) -----
+    async def rows(self, path: str, **params) -> list[dict]:
+        """Any list endpoint, raw. The copilot's tool modules whitelist fields and cap rows; keep that
+        trimming there, not here. `from_`/`to` map to FMP's `from`/`to`."""
+        if "from_" in params:
+            params["from"] = params.pop("from_")
+        out = await self._get(path, **{k: v for k, v in params.items() if v is not None})
+        if isinstance(out, dict):
+            return [out]
+        return list(out or [])
+
+    async def row(self, path: str, **params) -> dict:
+        """First row of a list endpoint, or {} when it is empty."""
+        rows = await self.rows(path, **params)
+        return dict(rows[0]) if rows else {}
+
     async def key_metrics_ttm(self, symbol: str) -> dict:
         """Trailing-twelve-month metrics: marketCap, enterpriseValueTTM, evToEBITDATTM, returnOnEquityTTM, ..."""
         rows = await self._get("key-metrics-ttm", symbol=symbol)

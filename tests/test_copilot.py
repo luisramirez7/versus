@@ -270,21 +270,9 @@ async def test_graph_runs_one_tool_round_and_records_the_call(svc, ana_holds_aap
     result = await ask(ctx, "who's winning?", model=model, cfg=cfg())
     assert result.answer == "**Ana** leads."
     assert result.tool_calls == ["get_leaderboard"]
-    assert (
-        model.calls
-        == [
-            [
-                "get_quote",
-                "get_company",
-                "get_history_summary",
-                "get_news",
-                "get_portfolio",
-                "get_leaderboard",
-                "get_rules",
-            ]
-        ]
-        * 2
-    )
+    names = [t.name for t in build_tools(ctx)]
+    assert len(names) == 21 and names[:3] == ["get_portfolio", "get_leaderboard", "get_rules"]
+    assert model.calls == [names] * 2
     assert (result.prompt_tokens, result.completion_tokens) == (150, 30)
     assert result.elapsed_s >= 0
 
