@@ -29,10 +29,13 @@ class Settings(BaseSettings):
     min_players: int = 2  # set to 1 in .env to test a round alone
     dev_market_always_open: bool = False  # DEV ONLY: pretend the market never closes
 
-    # /ask copilot (Claude). Leave the key empty to disable the command.
-    anthropic_api_key: str = ""
-    ask_model: str = "claude-opus-5"
-    ask_effort: str = "medium"  # low | medium | high
+    # /ask copilot. Fireworks (OpenAI-compatible chat completions), same setup as lineage.
+    # Leave the key empty to disable the command.
+    fireworks_api_key: str = ""
+    llm_base_url: str = "https://api.fireworks.ai/inference/v1"
+    ask_model: str = "accounts/fireworks/models/deepseek-v4-flash-0731"
+    ask_temperature: float = 0.2
+    ask_max_tokens: int = 1200
     ask_rate_per_hour: int = 20  # per user
     ask_max_tool_rounds: int = 6
     ask_timeout_s: float = 90.0
