@@ -12,6 +12,7 @@ from versus.engine.settlement import settle_round
 from versus.engine.valuation import build_price_lookup, held_symbols, standings
 
 from .embeds import live_message, recap_embed
+from .recap import post_recap
 
 if TYPE_CHECKING:
     from .main import VersusBot
@@ -72,7 +73,11 @@ class Scheduler:
             channel = await self._channel(st.party.channel_id)
             if channel:
                 st = await svc.rounds.state(rnd.party_id)
-                await channel.send(embed=recap_embed(st, result))
+                try:
+                    await post_recap(self.bot, st, result, channel)
+                except Exception:
+                    log.exception("rich recap failed; posting the plain one")
+                    await channel.send(embed=recap_embed(st, result))
             await self.bot.board.unpin(rnd.party_id)
             self._warned.discard(rnd.id)
 

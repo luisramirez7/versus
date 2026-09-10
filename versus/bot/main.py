@@ -12,6 +12,7 @@ from .board import BoardManager
 from .cogs.info import InfoCog
 from .cogs.party import JoinView, PartyCog
 from .cogs.trade import TradeCog
+from .recap import RematchButton
 from .scheduler import Scheduler
 from .services import Services
 
@@ -40,6 +41,7 @@ class VersusBot(commands.Bot):
         await self.add_cog(TradeCog(self))
         await self.add_cog(InfoCog(self))
         self.add_view(JoinView(self))
+        self.add_dynamic_items(RematchButton)
         log.info("invite link: %s", invite_url(self.application_id))
         try:
             if self.svc.settings.dev_guild_id:

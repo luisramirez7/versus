@@ -61,6 +61,27 @@ async def refresh_lobby(bot: VersusBot, party_id: int) -> None:
         log.debug("lobby message edit failed", exc_info=True)
 
 
+async def open_lobby(bot: VersusBot, interaction: discord.Interaction, *, cash: int, preset: str) -> None:
+    """Create a party hosted by the interacting user and post the lobby. Shared by /party create and Run it back."""
+    svc = bot.svc
+    try:
+        st = await svc.rounds.create(
+            guild_id=interaction.guild_id or 0,
+            channel_id=interaction.channel_id,
+            host_user_id=interaction.user.id,
+            cash=cash,
+            preset=preset,
+        )
+        await svc.rounds.join(st.party.id, interaction.user.id, interaction.user.display_name)
+    except RoundError as e:
+        await interaction.response.send_message(str(e), ephemeral=True)
+        return
+    st = await svc.rounds.state(st.party.id)
+    await interaction.response.send_message(embed=lobby_embed(st), view=JoinView(bot))
+    msg = await interaction.original_response()
+    await svc.rounds.set_messages(st.party.id, lobby_message_id=msg.id)
+
+
 class PartyCog(commands.Cog):
     def __init__(self, bot: VersusBot) -> None:
         self.bot = bot
@@ -77,23 +98,7 @@ class PartyCog(commands.Cog):
         cash: Literal[1000, 10000, 100000] = 1000,
         preset: Literal["day", "week", "month", "quarter"] = "day",
     ) -> None:
-        svc = self.bot.svc
-        try:
-            st = await svc.rounds.create(
-                guild_id=interaction.guild_id or 0,
-                channel_id=interaction.channel_id,
-                host_user_id=interaction.user.id,
-                cash=cash,
-                preset=preset,
-            )
-            await svc.rounds.join(st.party.id, interaction.user.id, interaction.user.display_name)
-        except RoundError as e:
-            await interaction.response.send_message(str(e), ephemeral=True)
-            return
-        st = await svc.rounds.state(st.party.id)
-        await interaction.response.send_message(embed=lobby_embed(st), view=JoinView(self.bot))
-        msg = await interaction.original_response()
-        await svc.rounds.set_messages(st.party.id, lobby_message_id=msg.id)
+        await open_lobby(self.bot, interaction, cash=cash, preset=preset)
 
     @party.command(name="start", description="Start the round (host only)")
     async def start(self, interaction: discord.Interaction) -> None:

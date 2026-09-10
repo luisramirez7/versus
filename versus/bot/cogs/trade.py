@@ -12,13 +12,14 @@ from discord import app_commands
 from discord.ext import commands
 from sqlalchemy import select
 
-from versus.db import Fill
+from versus.db import FeedMessage, Fill
 from versus.engine.fills import OrderError
 from versus.engine.valuation import build_price_lookup, held_symbols, portfolio_view
 from versus.market.universe import ALLOWED_EXCHANGES, ETF_EXCHANGES
 
 from ..embeds import feed_line, fill_confirmation, portfolio_embed, quote_embed
 from ..format import money, qty, signed_money, ts
+from ..recap import FEED_REACTIONS
 
 if TYPE_CHECKING:
     from ..main import VersusBot
@@ -108,10 +109,35 @@ class TradeCog(commands.Cog):
             return
         await interaction.followup.send(fill_confirmation(r), ephemeral=True)
         try:
-            await interaction.channel.send(feed_line(interaction.user.display_name, r))
+            msg = await interaction.channel.send(feed_line(interaction.user.display_name, r))
+            await self._remember_feed(msg, st.round.id, pf.id, r)
+            for emoji in FEED_REACTIONS:
+                await msg.add_reaction(emoji)
         except discord.HTTPException:
             log.debug("feed line failed", exc_info=True)
         self.bot.board.mark_dirty(st.party.id)
+
+    async def _remember_feed(self, msg: discord.Message, round_id: int, portfolio_id: int, r) -> None:
+        svc = self.bot.svc
+        async with svc.db.session() as s:
+            fill_id = (
+                await s.execute(
+                    select(Fill.id)
+                    .where(
+                        Fill.portfolio_id == portfolio_id,
+                        Fill.symbol == r.symbol,
+                        Fill.filled_at == r.filled_at,
+                    )
+                    .order_by(Fill.id.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if fill_id is None:
+                return
+            s.add(
+                FeedMessage(fill_id=fill_id, round_id=round_id, channel_id=msg.channel.id, message_id=msg.id)
+            )
+            await s.commit()
 
     # ----- commands -----
     @app_commands.command(name="buy", description="Market buy at the next fresh price")

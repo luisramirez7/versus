@@ -165,15 +165,24 @@ def rules_embed(rules: Rules, st: PartyState) -> discord.Embed:
     return _footer(e)
 
 
-def recap_embed(st: PartyState, s: Settlement) -> discord.Embed:
+def recap_embed(st: PartyState, s: Settlement, extras=None) -> discord.Embed:
+    rnd = st.round
     e = discord.Embed(title="Final standings", color=GOLD)
     rows = []
     for st_ in s.standings:
-        medal = MEDALS.get(st_.rank, f"{st_.rank}.")
-        rows.append(f"{medal} **{st_.display_name}** · {money(st_.equity)} · {pct(st_.return_pct)}")
+        medal = MEDALS.get(st_.rank, f"`{st_.rank}.`")
+        top = f" · {st_.top_holding}" if st_.top_holding else ""
+        rows.append(f"{medal} **{st_.display_name}** · {money(st_.equity)} · {pct(st_.return_pct)}{top}")
     if s.standings:
         w = s.standings[0]
-        rows.insert(0, f"🏆 **{w.display_name}** wins with {pct(w.return_pct)}.\n")
+        margin = ""
+        if len(s.standings) > 1:
+            margin = f" by {money(w.equity - s.standings[1].equity)}"
+        rows.insert(0, f"🏆 **{w.display_name}** wins{margin} with {pct(w.return_pct)}.")
+        rows.insert(
+            1,
+            f"_{PRESET_LABELS[rnd.preset]} · {money(rnd.starting_cash)} each · {len(s.standings)} players_\n",
+        )
     e.description = "\n".join(rows) or "_Nobody played._"
     if s.best_trade:
         b = s.best_trade
@@ -191,7 +200,13 @@ def recap_embed(st: PartyState, s: Settlement) -> discord.Embed:
         )
     if s.most_active:
         e.add_field(name="Most active", value=f"{s.most_active[0]} · {s.most_active[1]} fills", inline=True)
-    e.add_field(name="Run it back", value="`/party create` starts a new one in this channel.", inline=False)
+    if extras is not None:
+        if extras.crowd_favorite:
+            h = extras.crowd_favorite
+            e.add_field(name="Crowd favorite 🔥", value=f"{h.label} · {h.count}×", inline=True)
+        if extras.most_clowned:
+            h = extras.most_clowned
+            e.add_field(name="Most clowned 🤡", value=f"{h.label} · {h.count}×", inline=True)
     return _footer(e, f"Settled {s.ended_at.astimezone().strftime('%b %-d, %-I:%M %p').lower()}")
 
 

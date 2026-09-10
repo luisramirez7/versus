@@ -212,3 +212,14 @@ class Instrument(Base):
 
 
 Index("ix_fills_symbol", Fill.symbol)
+
+
+class FeedMessage(Base):
+    """The public feed line posted for a fill, so reactions can be tallied at settlement."""
+
+    __tablename__ = "feed_messages"
+
+    fill_id: Mapped[int] = mapped_column(ForeignKey("fills.id"), primary_key=True)
+    round_id: Mapped[int] = mapped_column(ForeignKey("rounds.id"), index=True)
+    channel_id: Mapped[int] = mapped_column(BigInteger)
+    message_id: Mapped[int] = mapped_column(BigInteger)
