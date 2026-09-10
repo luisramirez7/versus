@@ -20,11 +20,13 @@ class InfoCog(commands.Cog):
 
     @app_commands.command(name="leaderboard", description="Post (and re-pin) the standings")
     async def leaderboard(self, interaction: discord.Interaction) -> None:
+        # Ack within Discord's 3s window before any DB/board work, otherwise the
+        # interaction token expires (404 10062 Unknown interaction).
+        await interaction.response.defer(ephemeral=True, thinking=True)
         st = await self.bot.svc.rounds.active(interaction.channel_id)
         if st is None:
-            await interaction.response.send_message("No party in this channel.", ephemeral=True)
+            await interaction.followup.send("No party in this channel.", ephemeral=True)
             return
-        await interaction.response.defer(ephemeral=True, thinking=True)
         msg = await self.bot.board.refresh(st.party.id, repost=True)
         if msg is None:
             await interaction.followup.send(
@@ -35,10 +37,12 @@ class InfoCog(commands.Cog):
 
     @app_commands.command(name="rules", description="This round's rules")
     async def rules(self, interaction: discord.Interaction) -> None:
+        # Ack first (see leaderboard) so a slow DB lookup can't expire the token.
+        await interaction.response.defer(ephemeral=True, thinking=True)
         st = await self.bot.svc.rounds.active(interaction.channel_id)
         if st is None:
-            await interaction.response.send_message("No party in this channel.", ephemeral=True)
+            await interaction.followup.send("No party in this channel.", ephemeral=True)
             return
-        await interaction.response.send_message(
+        await interaction.followup.send(
             embed=rules_embed(self.bot.svc.rules_for(st.round), st), ephemeral=True
         )

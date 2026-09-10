@@ -132,13 +132,15 @@ class PartyCog(commands.Cog):
 
     @party.command(name="status", description="Where the round stands")
     async def status(self, interaction: discord.Interaction) -> None:
+        # Ack within Discord's 3s window before the DB lookup (see info.leaderboard).
+        await interaction.response.defer(ephemeral=True, thinking=True)
         st = await self.bot.svc.rounds.active(interaction.channel_id)
         if st is None:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "No party here. `/party create` to open one.", ephemeral=True
             )
             return
-        await interaction.response.send_message(embed=status_embed(st), ephemeral=True)
+        await interaction.followup.send(embed=status_embed(st), ephemeral=True)
 
     @party.command(name="cancel", description="Cancel a party that hasn't gone live (host only)")
     async def cancel(self, interaction: discord.Interaction) -> None:
