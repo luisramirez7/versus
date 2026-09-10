@@ -12,6 +12,7 @@ from .board import BoardManager
 from .cogs.ask import AskCog
 from .cogs.chart import ChartCog
 from .cogs.info import InfoCog
+from .cogs.market import MarketCog
 from .cogs.party import JoinView, PartyCog
 from .cogs.trade import TradeCog
 from .recap import RematchButton
@@ -44,6 +45,7 @@ class VersusBot(commands.Bot):
         await self.add_cog(InfoCog(self))
         await self.add_cog(ChartCog(self))
         await self.add_cog(AskCog(self))
+        await self.add_cog(MarketCog(self))
         self.add_view(JoinView(self))
         self.add_dynamic_items(RematchButton)
         log.info("invite link: %s", invite_url(self.application_id))

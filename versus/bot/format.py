@@ -36,3 +36,25 @@ def arrow(side: str) -> str:
 
 def trunc(s: str, n: int) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
+
+
+def compact(x: float | None, prefix: str = "$") -> str:
+    """5417511070000 -> $5.42T, 4894465080 -> $4.89B, 300000000 -> $300M. None -> —."""
+    if x is None:
+        return "—"
+    n = float(x)
+    sign = "-" if n < 0 else ""
+    n = abs(n)
+    for div, suffix in ((1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "k")):
+        if n >= div:
+            v = n / div
+            return f"{sign}{prefix}{v:,.2f}{suffix}" if v < 10 else f"{sign}{prefix}{v:,.0f}{suffix}"
+    return f"{sign}{prefix}{n:,.0f}"
+
+
+def spct(x: float | None, digits: int = 2) -> str:
+    """A value already in percent, signed: 9.0 -> +9.00%. None -> —."""
+    if x is None:
+        return "—"
+    sign = "+" if x >= 0 else "−"
+    return f"{sign}{abs(float(x)):.{digits}f}%"
