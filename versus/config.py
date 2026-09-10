@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     fill_timeout_s: float = 30.0
     board_refresh_s: float = 60.0
     scheduler_tick_s: float = 15.0
-    min_players: int = 2  # set to 1 in .env to test a round alone
+    min_players: int = 1  # a host can run a round solo; friends drop in while it's live
     dev_market_always_open: bool = False  # DEV ONLY: pretend the market never closes
 
     # /ask copilot. Fireworks (OpenAI-compatible chat completions), same setup as lineage.

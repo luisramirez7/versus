@@ -12,6 +12,7 @@ from discord.ext import commands
 from versus.engine.rounds import RoundError
 
 from ..embeds import live_message, lobby_embed, scheduled_message, status_embed
+from ..format import money, ts
 
 if TYPE_CHECKING:
     from ..main import VersusBot
@@ -44,8 +45,18 @@ async def join_party(bot: VersusBot, interaction: discord.Interaction) -> None:
     except RoundError as e:
         await interaction.response.send_message(str(e), ephemeral=True)
         return
-    await interaction.response.send_message("You're in. Wait for the host to start.", ephemeral=True)
-    await refresh_lobby(bot, st.party.id)
+    if st.party.status == "live":
+        # Matchmaking drop-in: they're already trading, so point them at the round, not the lobby.
+        await interaction.response.send_message(
+            f"You're in — **round's live** with {money(st.round.starting_cash)}. "
+            f"Ends {ts(st.round.end_at, 'R')}. `/buy` to get going.",
+            ephemeral=True,
+        )
+        await interaction.followup.send(f"🎮 **{interaction.user.display_name}** dropped into the round.")
+        bot.board.mark_dirty(st.party.id)
+    else:
+        await interaction.response.send_message("You're in. Wait for the host to start.", ephemeral=True)
+        await refresh_lobby(bot, st.party.id)
 
 
 async def refresh_lobby(bot: VersusBot, party_id: int) -> None:
