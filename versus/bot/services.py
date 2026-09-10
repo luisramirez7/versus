@@ -11,7 +11,7 @@ from versus.engine.fills import FillEngine
 from versus.engine.rounds import RoundService
 from versus.engine.rules import Rules
 from versus.engine.snapshots import SnapshotWriter
-from versus.market.clock import MarketCalendar
+from versus.market.clock import AlwaysOpenCalendar, MarketCalendar
 from versus.market.fmp import FMPClient
 from versus.market.prices import PriceService
 from versus.market.universe import Universe
@@ -36,6 +36,11 @@ class Services:
         await db.create_all()
         fmp = FMPClient(settings.fmp_api_key, settings.fmp_base_url)
         calendar = await MarketCalendar.load(fmp)
+        if settings.dev_market_always_open:
+            calendar = AlwaysOpenCalendar(calendar)
+            log.warning(
+                "DEV_MARKET_ALWAYS_OPEN is on: orders fill at last-close prices at any hour. Not for real games."
+            )
         prices = PriceService(fmp, settings.poll_interval_s, on_observations=SnapshotWriter(db))
         base_rules = Rules(fill_delay_s=settings.fill_delay_s, fill_timeout_s=settings.fill_timeout_s)
         universe = Universe(fmp, db, base_rules)

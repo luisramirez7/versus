@@ -119,3 +119,26 @@ class MarketCalendar:
             if s and s.close <= local:
                 return s.close.astimezone(UTC)
             d -= timedelta(days=1)
+
+
+class AlwaysOpenCalendar(MarketCalendar):
+    """DEV ONLY. Treats the market as open around the clock so the whole loop can be
+    exercised after hours (FMP keeps serving last-close prices). Rounds run for
+    `sessions` × 24 h from now. Never enable this for a real game."""
+
+    def __init__(self, base: MarketCalendar) -> None:
+        super().__init__(base.holidays)
+
+    def is_open(self, now: datetime) -> bool:
+        return True
+
+    def current_session(self, now: datetime) -> Session | None:
+        d = now.astimezone(ET).date()
+        return Session(d, datetime.combine(d, time(0, 0), ET), datetime.combine(d, time(23, 59), ET))
+
+    def next_open(self, now: datetime) -> datetime:
+        return now.astimezone(UTC)
+
+    def round_window(self, now: datetime, sessions: int) -> tuple[datetime, datetime]:
+        start = now.astimezone(UTC)
+        return start, start + timedelta(days=sessions)

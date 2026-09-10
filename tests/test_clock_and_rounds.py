@@ -81,3 +81,17 @@ async def test_scheduled_when_market_closed(rounds, clock):
     assert [r.id for r in to_live] == [st.round.id]
     assert await rounds.mark_live(st.round.id)
     assert not await rounds.mark_live(st.round.id)
+
+
+def test_always_open_calendar_is_dev_only_and_open_at_night():
+    from datetime import timedelta
+
+    from versus.market.clock import AlwaysOpenCalendar
+
+    cal = AlwaysOpenCalendar(MarketCalendar())
+    night = et(2026, 9, 12, 23)  # Saturday night
+    assert cal.is_open(night)
+    assert cal.next_open(night) == night.astimezone(UTC)
+    start, end = cal.round_window(night, 1)
+    assert end - start == timedelta(days=1)
+    assert cal.holidays  # still carries the real calendar for anything else

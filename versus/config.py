@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     board_refresh_s: float = 60.0
     scheduler_tick_s: float = 15.0
     min_players: int = 2  # set to 1 in .env to test a round alone
+    dev_market_always_open: bool = False  # DEV ONLY: pretend the market never closes
 
     log_level: str = "INFO"
 
